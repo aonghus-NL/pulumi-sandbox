@@ -2,8 +2,24 @@ import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
 
-// Create an AWS resource (S3 Bucket)
-const bucket = new aws.s3.Bucket("my-bucket");
-
-// Export the name of the bucket
-export const bucketName = bucket.id;
+const cluster = new aws.ecs.Cluster("cluster");
+const lb = new awsx.lb.ApplicationLoadBalancer("lb", {});
+const service = new awsx.ecs.FargateService("service", {
+  cluster: cluster.arn,
+  assignPublicIp: true,
+  desiredCount: 4,
+  taskDefinitionArgs: {
+    container: {
+      image: "nginxdemos/hello",
+      cpu: 512,
+      memory: 128,
+      essential: true,
+      portMappings: [
+        {
+          targetGroup: lb.defaultTargetGroup,
+        },
+      ],
+    },
+  },
+});
+export const url = lb.loadBalancer.dnsName;
